@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#4c6ef5"/>
+  <!-- チェックリスト (maskable の安全領域内に収める) -->
+  <rect x="136" y="120" width="240" height="280" rx="36" fill="#fff"/>
+  <g stroke="#4c6ef5" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <polyline points="176,196 196,216 232,180"/>
+    <polyline points="176,276 196,296 232,260"/>
+  </g>
+  <g stroke="#bac8ff" stroke-width="20" stroke-linecap="round">
+    <line x1="262" y1="198" x2="332" y2="198"/>
+    <line x1="262" y1="278" x2="332" y2="278"/>
+    <line x1="176" y1="350" x2="332" y2="350"/>
+  </g>
+</svg>

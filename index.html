@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#4c6ef5">
+  <meta name="robots" content="noindex, nofollow">
+  <title>やること</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="やること">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header class="app-header">
+    <h1>✅ やること</h1>
+    <div class="header-actions">
+      <button id="sync-btn" class="sync-indicator" type="button" data-status="off" aria-label="同期の状態"></button>
+      <button id="settings-btn" class="icon-btn" type="button" aria-label="設定">⚙️</button>
+    </div>
+  </header>
+
+  <nav class="views" role="tablist">
+    <button type="button" role="tab" data-view="today" aria-selected="true">今日<b class="count" data-count="today"></b></button>
+    <button type="button" role="tab" data-view="upcoming" aria-selected="false">予定<b class="count" data-count="upcoming"></b></button>
+    <button type="button" role="tab" data-view="all" aria-selected="false">すべて<b class="count" data-count="all"></b></button>
+    <button type="button" role="tab" data-view="done" aria-selected="false">完了</button>
+  </nav>
+
+  <main id="task-groups"></main>
+
+  <form id="quick-add" class="quick-add" autocomplete="off">
+    <div id="quick-preview" class="quick-preview" hidden></div>
+    <div class="quick-row">
+      <input id="quick-input" type="text" enterkeyhint="done"
+             placeholder="タスクを追加（例: 明日 15:00 レポート提出 !高）">
+      <button type="submit" class="primary round" aria-label="追加">＋</button>
+    </div>
+  </form>
+
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <span id="toast-text"></span>
+    <button id="toast-action" type="button" hidden></button>
+  </div>
+
+  <!-- タスクの編集 -->
+  <dialog id="task-dialog" class="sheet">
+    <form method="dialog" id="task-form">
+      <div class="sheet-header">
+        <button type="button" class="check big" id="edit-done" aria-label="完了にする"></button>
+        <textarea id="edit-title" rows="1" placeholder="タスク名" required></textarea>
+        <button value="close" class="icon-btn" aria-label="閉じる">✕</button>
+      </div>
+
+      <div class="field">
+        <span class="label">優先度</span>
+        <div class="segmented" id="edit-priority">
+          <button type="button" data-priority="0">なし</button>
+          <button type="button" data-priority="1" class="p1">低</button>
+          <button type="button" data-priority="2" class="p2">中</button>
+          <button type="button" data-priority="3" class="p3">高</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <span class="label">期限</span>
+        <div class="chips">
+          <button type="button" class="chip" data-due="0">今日</button>
+          <button type="button" class="chip" data-due="1">明日</button>
+          <button type="button" class="chip" data-due="7">1週間後</button>
+          <button type="button" class="chip" data-due="clear">なし</button>
+        </div>
+        <div class="row">
+          <input id="edit-due" type="date" aria-label="期限の日付">
+          <input id="edit-time" type="time" aria-label="期限の時刻">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="edit-remind" class="label">🔔 リマインド</label>
+        <select id="edit-remind">
+          <option value="">なし</option>
+          <option value="0">期限ちょうど（時刻なしは朝9時）</option>
+          <option value="10">10分前</option>
+          <option value="60">1時間前</option>
+          <option value="180">3時間前</option>
+          <option value="1440">1日前</option>
+          <option value="4320">3日前</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <span class="label">サブタスク <small id="sub-progress"></small></span>
+        <ul id="subtask-list" class="subtasks"></ul>
+        <div class="row">
+          <input id="subtask-input" type="text" placeholder="サブタスクを追加" enterkeyhint="enter">
+          <button type="button" id="subtask-add" class="secondary">追加</button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="edit-notes" class="label">メモ</label>
+        <textarea id="edit-notes" rows="3" placeholder="メモ・URL など"></textarea>
+      </div>
+
+      <div class="sheet-actions">
+        <button type="button" id="edit-delete" class="danger">🗑️ 削除</button>
+        <button type="button" id="edit-calendar" class="secondary">📅 カレンダーに登録</button>
+      </div>
+    </form>
+  </dialog>
+
+  <!-- 設定 -->
+  <dialog id="settings-dialog" class="sheet">
+    <form method="dialog">
+      <div class="sheet-header">
+        <h2>設定</h2>
+        <button value="close" class="icon-btn" aria-label="閉じる">✕</button>
+      </div>
+
+      <section class="settings-section">
+        <h3>☁️ スマホとPCで同期</h3>
+        <p id="sync-detail" class="hint"></p>
+        <div id="sync-setup">
+          <label for="token-input" class="label">GitHub トークン（gist の権限）</label>
+          <input id="token-input" type="password" autocomplete="off" placeholder="ghp_...">
+          <p class="hint">
+            タスクは GitHub の非公開 Gist に保存されます。
+            <a href="https://github.com/settings/tokens/new?scopes=gist&description=yarukoto-sync" target="_blank" rel="noopener">トークンを作成する</a>
+            （権限は <b>gist</b> だけでOK）
+          </p>
+          <button type="button" id="token-save" class="primary">同期を始める</button>
+        </div>
+        <div id="sync-connected" hidden>
+          <div class="row">
+            <button type="button" id="sync-now" class="secondary">🔄 今すぐ同期</button>
+            <button type="button" id="link-device" class="secondary">📱 ほかの端末と連携</button>
+          </div>
+          <div id="link-panel" class="link-panel" hidden>
+            <p class="hint">ほかの端末のカメラでこのQRコードを読み取ると、同期の設定が完了します。<br>
+              <b>⚠️ トークンが含まれるので、他人に見せないでください。</b></p>
+            <div id="qr"></div>
+            <button type="button" id="copy-link" class="secondary">リンクをコピー</button>
+          </div>
+          <button type="button" id="sync-off" class="link-btn danger-text">同期を解除する</button>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <h3>🔔 通知</h3>
+        <p id="notify-detail" class="hint"></p>
+        <button type="button" id="notify-enable" class="secondary">通知を許可する</button>
+      </section>
+
+      <section class="settings-section">
+        <h3>💾 データ</h3>
+        <div class="row">
+          <button type="button" id="export-btn" class="secondary">書き出し</button>
+          <label class="secondary file-btn">読み込み<input id="import-input" type="file" accept="application/json" hidden></label>
+        </div>
+        <button type="button" id="clear-done" class="link-btn danger-text">完了済みのタスクをすべて削除</button>
+      </section>
+    </form>
+  </dialog>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" defer></script>
+  <script src="dates.js"></script>
+  <script src="store.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
